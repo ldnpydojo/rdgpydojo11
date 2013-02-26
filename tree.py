@@ -9,6 +9,10 @@ from euclid import Vector3 as vec
 
 F_SIZE = 20
 SEG_HEIGHT = 1.5
+ORBIT_DIST = 15
+ORBIT_SPEED = 0.5
+
+angle = 0
 
 window = pyglet.window.Window()
 
@@ -26,13 +30,18 @@ def draw_floor():
 def compute_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
     points = [(pos)]
 
-    pos2 = pos + (direction * weight)
+    direction += vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5)
+    direction = direction.normalize()
 
+    pos2 = pos + (direction * weight * SEG_HEIGHT)
     points.append(pos2)
 
     if weight > 0.05:
+        branch_direction = direction + vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5)
         points.extend(
-            compute_tree(pos2, direction, weight - 0.1)
+            compute_tree(pos2, direction, weight - 0.1))
+        points.extend(
+            compute_tree(pos2, branch_direction, weight - 0.1)
         )
 
     return points
@@ -59,7 +68,10 @@ def on_draw():
     gluPerspective(70, window.width / float(window.height), 0.05, 100)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    glTranslatef(0, -1.3, -15)
+    eye = math.sin(angle) * ORBIT_DIST, 1.3, math.cos(angle) * ORBIT_DIST
+    look_at = 0, 1.3, 0
+    up = 0, 1, 0
+    gluLookAt(*(eye + look_at + up))
 
     glDisable(GL_CULL_FACE)
 
@@ -67,4 +79,9 @@ def on_draw():
     draw_tree()
 
 
+def on_update(dt):
+    global angle
+    angle += ORBIT_SPEED * dt
+
+pyglet.clock.schedule(on_update)
 pyglet.app.run()
