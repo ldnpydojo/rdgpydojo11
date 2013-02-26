@@ -31,6 +31,7 @@ RANDOMNESS = 1.3
 UPWARD_BIAS = 0.2
 BULK = 0.4
 
+
 def draw_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
 
     direction += RANDOMNESS * vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5) + UPWARD_BIAS * vec(0, 1.0, 0)
@@ -47,7 +48,8 @@ def draw_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
     top_hex_list = [pos2 + v * next_weight * BULK for v in base_hex_list]
     glBegin(GL_TRIANGLE_STRIP)
     glColor3f(*color)
-    for v1, v2 in zip(bottom_hex_list, top_hex_list):
+    for n, v1, v2 in zip(base_hex_list, bottom_hex_list, top_hex_list):
+        glNormal3f(*n)
         glVertex3f(*v1)
         glVertex3f(*v2)
     glEnd()
@@ -76,6 +78,18 @@ glEndList()
 def on_draw():
     glClearColor(0.3, 0.4, 1.0, 1.0)
     window.clear()
+
+    def v(*args):
+        return (GLfloat * len(args))(*args)
+
+    glLightfv(GL_LIGHT0, GL_POSITION,  v(-40, 50, 60, 0.0))
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, v(0.7, 0.7, 0.7, 1.0))
+    glLightfv(GL_LIGHT0, GL_AMBIENT, v(0.1, 0.1, 0.1, 1.0))
+    glEnable(GL_LIGHT0)
+    glEnable(GL_LIGHTING)
+    glEnable(GL_COLOR_MATERIAL)
+    glEnable(GL_DEPTH_TEST)
+    glShadeModel(GL_SMOOTH)           # most obj files expect to be smooth-shaded
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
