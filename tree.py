@@ -29,16 +29,28 @@ def draw_floor():
 WEIGHT_FACTOR = 0.87
 RANDOMNESS = 1.3
 UPWARD_BIAS = 0.2
+BULK = 0.4
 
-def compute_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
+def draw_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
 
     direction += RANDOMNESS * vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5) + UPWARD_BIAS * vec(0, 1.0, 0)
     direction = direction.normalize()
 
     pos2 = pos + (direction * weight * SEG_HEIGHT)
-
+    next_weight = weight * WEIGHT_FACTOR
     color = (0.5, 0.2, 0) if weight > 0.2 else (0.2, 0.6, 0.1)
     points = [(pos, pos2, color)]
+    base_hex_list = [vec(math.sin(math.radians(a)),
+        0,
+        math.cos(math.radians(a))) for a in range(0, 361, 60)]
+    bottom_hex_list = [pos + v * weight * BULK for v in base_hex_list]
+    top_hex_list = [pos2 + v * next_weight * BULK for v in base_hex_list]
+    glBegin(GL_TRIANGLE_STRIP)
+    glColor3f(*color)
+    for v1, v2 in zip(bottom_hex_list, top_hex_list):
+        glVertex3f(*v1)
+        glVertex3f(*v2)
+    glEnd()
 
     if weight > 0.2:
         branch = random.random() > (weight ** 2 - 0.5)
@@ -46,29 +58,19 @@ def compute_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
             rvec = vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5)
             branch_direction = direction + rvec * (weight + 0.2)
             points.extend(
-                compute_tree(pos2, branch_direction, weight * WEIGHT_FACTOR)
+                draw_tree(pos2, branch_direction, next_weight)
             )
         points.extend(
-            compute_tree(pos2, direction, weight * WEIGHT_FACTOR))
+            draw_tree(pos2, direction, next_weight))
 
     return points
 
 
-tree = compute_tree(vec(0, 0, 0))
-
-
-def draw_tree():
-    glBegin(GL_LINES)
-    for p1, p2, col in tree:
-        glColor3f(*col)
-        glVertex3f(*p1)
-        glVertex3f(*p2)
-    glEnd()
-
 dlist = glGenLists(1)
 glNewList(dlist, GL_COMPILE)
-draw_tree()
+draw_tree(vec(0, 0, 0))
 glEndList()
+
 
 @window.event
 def on_draw():
