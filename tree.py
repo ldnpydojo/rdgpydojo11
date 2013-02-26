@@ -5,7 +5,7 @@ from pyglet.gl import *
 
 import random
 import math
-from euclid import Vector3 as vec
+from euclid import Vector3 as vec, Matrix4 as mat
 
 F_SIZE = 20
 SEG_HEIGHT = 1.5
@@ -32,7 +32,7 @@ UPWARD_BIAS = 0.2
 BULK = 0.4
 
 
-def draw_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
+def draw_tree(pos, matrix=mat.new_identity(), direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
 
     direction += RANDOMNESS * vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5) + UPWARD_BIAS * vec(0, 1.0, 0)
     direction = direction.normalize()
@@ -41,14 +41,28 @@ def draw_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
     next_weight = weight * WEIGHT_FACTOR
     color = (0.5, 0.2, 0) if weight > 0.2 else (0.2, 0.6, 0.1)
     points = [(pos, pos2, color)]
+
+
     base_hex_list = [vec(math.sin(math.radians(a)),
         0,
         math.cos(math.radians(a))) for a in range(0, 361, 60)]
-    bottom_hex_list = [pos + v * weight * BULK for v in base_hex_list]
-    top_hex_list = [pos2 + v * next_weight * BULK for v in base_hex_list]
+
+
+    p1 = matrix * base_hex_list[0]
+    r = -p1.cross(direction)
+    f = r.cross(direction)
+
+    matrix2 = mat.new_identity()
+    matrix2[0:3] = r
+    matrix2[4:7] = direction
+    matrix2[8:11] = f
+
+    normals = [matrix * v for v in base_hex_list]
+    bottom_hex_list = [pos + matrix * v * weight * BULK for v in base_hex_list]
+    top_hex_list = [pos2 + matrix2 * v * next_weight * BULK for v in base_hex_list]
     glBegin(GL_TRIANGLE_STRIP)
     glColor3f(*color)
-    for n, v1, v2 in zip(base_hex_list, bottom_hex_list, top_hex_list):
+    for n, v1, v2 in zip(normals, bottom_hex_list, top_hex_list):
         glNormal3f(*n)
         glVertex3f(*v1)
         glVertex3f(*v2)
@@ -60,10 +74,10 @@ def draw_tree(pos, direction=vec(-0.1, SEG_HEIGHT, 0), weight=1.0):
             rvec = vec(random.random() - 0.5, random.random() - 0.5, random.random() - 0.5)
             branch_direction = direction + rvec * (weight + 0.2)
             points.extend(
-                draw_tree(pos2, branch_direction, next_weight)
+                draw_tree(pos2, matrix2, branch_direction, next_weight)
             )
         points.extend(
-            draw_tree(pos2, direction, next_weight))
+            draw_tree(pos2, matrix2, direction, next_weight))
 
     return points
 
